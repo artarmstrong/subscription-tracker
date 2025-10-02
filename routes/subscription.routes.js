@@ -1,6 +1,10 @@
 import { Router } from "express";
+import { subscriptionLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const subscriptionRouter = Router();
+
+// Apply rate limiting to all subscription routes
+subscriptionRouter.use(subscriptionLimiter);
 
 subscriptionRouter.get('/', (req, res) => res.send({ title: 'GET all subscriptions' }));
 subscriptionRouter.get('/:id', (req, res) => res.send({ title: 'GET subscription details' }));

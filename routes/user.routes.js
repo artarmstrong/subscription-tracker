@@ -2,8 +2,12 @@ import { Router } from "express";
 
 import authorize from '../middlewares/auth.middleware.js';
 import { getUser, getUsers } from "../controllers/user.controller.js";
+import { userLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const userRouter = Router();
+
+// Apply rate limiting to all user routes
+userRouter.use(userLimiter);
 
 userRouter.get('/', getUsers);
 userRouter.get('/:id', authorize, getUser);
