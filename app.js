@@ -7,7 +7,7 @@ import subscriptionRouter from './routes/subscription.routes.js';
 import userRouter from './routes/user.routes.js';
 import connectToDatabase from './database/mongodb.js';
 import errorMiddleware from './middlewares/error.middleware.js';
-// Removed global rate limiter to avoid double counting with route-specific limiters
+import { publicLimiter } from './middlewares/rateLimit.middleware.js';
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -24,7 +24,7 @@ app.use('/api/v1/users', userRouter);
 
 app.use(errorMiddleware);
 
-app.get('/', (req, res) => {
+app.get('/', publicLimiter, (req, res) => {
     res.send('Welcome to the Subscription Tracker API');
 });
 

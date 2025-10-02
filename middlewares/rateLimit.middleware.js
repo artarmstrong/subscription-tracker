@@ -9,21 +9,21 @@ const createMongoStore = (collectionName, windowMs) => {
     });
 };
 
-// General API rate limit - 100 requests per 15 minutes
-export const generalLimiter = rateLimit({
+// Basic rate limit for public endpoints - 1000 requests per 15 minutes
+export const publicLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    store: createMongoStore('general_rate_limits', 15 * 60 * 1000),
+    max: 1000, // generous limit for public endpoints
+    store: createMongoStore('public_rate_limits', 15 * 60 * 1000),
     message: {
-        error: 'Too many requests from this IP, please try again later.',
+        error: 'Too many requests, please try again later.',
         retryAfter: '15 minutes'
     },
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    standardHeaders: true,
+    legacyHeaders: false,
     handler: (req, res) => {
         res.status(429).json({
             success: false,
-            error: 'Too many requests from this IP, please try again later.',
+            error: 'Too many requests, please try again later.',
             retryAfter: '15 minutes'
         });
     }
