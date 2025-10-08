@@ -9,7 +9,7 @@ const userRouter = Router();
 // Apply rate limiting to all user routes
 userRouter.use(userLimiter);
 
-userRouter.get('/', getUsers);
+userRouter.get('/', authorize, getUsers);
 userRouter.get('/:id', authorize, getUser);
 userRouter.post('/', (req, res) => res.send({ title: 'CREATE new user'}));
 userRouter.put('/:id', (req, res) => res.send({ title: 'UPDATE user'}));

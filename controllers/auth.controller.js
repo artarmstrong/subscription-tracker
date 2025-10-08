@@ -22,20 +22,18 @@ export const signUp = async (req, res, next) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = await User.create([{ name, email, password: hashedPassword }], { session });
-        const token = jwt.sign({ userId: newUser[0]._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        const newUser = await User.create({ name, email, password: hashedPassword });
+        const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
         res.status(201).json({
             success: true,
-            message: 'User created successfullly',
+            message: 'User created successfully',
             data: {
                 token,
-                user: newUser[0]
+                user: newUser
             }
         });
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         next(error);
     }
 }
@@ -64,7 +62,7 @@ export const signIn = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: 'User signed in successfullly',
+            message: 'User signed in successfully',
             data: {
                 token,
                 user,
@@ -76,5 +74,14 @@ export const signIn = async (req, res, next) => {
 }
 
 export const signOut = async (req, res, next) => {
-    
+    try {
+        // Since we're using JWT tokens (stateless), logout is handled client-side
+        // by removing the token. This endpoint confirms the logout action.
+        res.status(200).json({
+            success: true,
+            message: 'User signed out successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
 }
