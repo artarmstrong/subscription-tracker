@@ -11,7 +11,10 @@ export const {
 } = process.env;
 
 // Validate critical environment variables
-const requiredEnvVars = ['DB_URI', 'JWT_SECRET'];
+// DB_URI not required in test environment (uses in-memory MongoDB)
+const requiredEnvVars = process.env.NODE_ENV === 'test'
+    ? ['JWT_SECRET']
+    : ['DB_URI', 'JWT_SECRET'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
