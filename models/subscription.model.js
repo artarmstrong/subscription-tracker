@@ -1,4 +1,4 @@
-import mongoose, { mongo } from 'mongoose';
+import mongoose from 'mongoose';
 
 const subscriptionSchema = new mongoose.Schema(
     {
@@ -11,7 +11,7 @@ const subscriptionSchema = new mongoose.Schema(
         },
         price: {
             type: Number,
-            require: [true, 'Subscription price is required'],
+            required: [true, 'Subscription price is required'],
             min: [0, 'Price must be greater than 0'],
         },
         currency: {
@@ -22,6 +22,7 @@ const subscriptionSchema = new mongoose.Schema(
         frequency: {
             type: String,
             enum: ['daily', 'weekly', 'monthly', 'yearly'],
+            required: true,
         },
         category: {
             type: String,

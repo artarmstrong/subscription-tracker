@@ -1,4 +1,4 @@
-import mongoose, { mongo } from 'mongoose';
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema (
     {
@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema (
         },
         password: {
             type: String,
-            require: [true, 'User Password is required'],
+            required: [true, 'User Password is required'],
             minLength: 6,
         }
     },

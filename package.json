@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
@@ -21,8 +24,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@jest/globals": "^30.2.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",
-    "nodemon": "^3.1.10"
+    "jest": "^30.2.0",
+    "mongodb-memory-server": "^10.2.1",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
   }
 }
