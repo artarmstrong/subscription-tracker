@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import authorize from '../middlewares/auth.middleware.js';
-import { getUser, getUsers } from "../controllers/user.controller.js";
+import { getUser, getUsers, createUser } from "../controllers/user.controller.js";
 import { userLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const userRouter = Router();
@@ -11,7 +11,7 @@ userRouter.use(userLimiter);
 
 userRouter.get('/', authorize, getUsers);
 userRouter.get('/:id', authorize, getUser);
-userRouter.post('/', (req, res) => res.send({ title: 'CREATE new user'}));
+userRouter.post('/', authorize, createUser);
 userRouter.put('/:id', (req, res) => res.send({ title: 'UPDATE user'}));
 userRouter.delete('/:id', (req, res) => res.send({ title: 'DELETE user'}));
 
