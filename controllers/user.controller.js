@@ -71,6 +71,72 @@ export const createUser = async (req, res, next) => {
     }
 }
 
+export const updateUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { name, email, password } = req.body;
+
+        // Find the user first
+        const user = await User.findById(id);
+        if (!user) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Prepare update object
+        const updateData = {};
+
+        // Update name if provided
+        if (name !== undefined) {
+            updateData.name = name;
+        }
+
+        // Update email if provided and check for duplicates
+        if (email !== undefined) {
+            // Check if email is being changed and if it's already taken by another user
+            if (email !== user.email) {
+                const existingUser = await User.findOne({ email });
+                if (existingUser) {
+                    const error = new Error('Email already in use by another user');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                updateData.email = email;
+            }
+        }
+
+        // Update password if provided (hash it first)
+        if (password !== undefined) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            updateData.password = hashedPassword;
+        }
+
+        // Check if there's anything to update
+        if (Object.keys(updateData).length === 0) {
+            const error = new Error('No valid fields provided for update');
+            error.statusCode = 400;
+            throw error;
+        }
+
+        // Update the user
+        const updatedUser = await User.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        res.status(200).json({
+            success: true,
+            message: 'User updated successfully',
+            data: updatedUser
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
 export const deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params;

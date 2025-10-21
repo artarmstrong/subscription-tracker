@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import bcrypt from 'bcryptjs';
-import { createUser, getUsers, getUser, deleteUser } from '../../controllers/user.controller.js';
+import { createUser, getUsers, getUser, updateUser, deleteUser } from '../../controllers/user.controller.js';
 import User from '../../models/user.model.js';
 import Subscription from '../../models/subscription.model.js';
 import { connectTestDb, closeTestDb, clearTestDb } from '../testDb.js';
@@ -317,6 +317,325 @@ describe('User Controller', () => {
             await getUser(req, res, next);
 
             expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+    });
+
+    describe('updateUser', () => {
+        it('should update user name successfully', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { name: 'Jane Smith' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'Jane Smith',
+                    email: 'john@example.com'
+                })
+            });
+
+            // Verify password is not in response
+            expect(res.json.mock.calls[0][0].data.password).toBeUndefined();
+        });
+
+        it('should update user email successfully', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { email: 'newemail@example.com' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'John Doe',
+                    email: 'newemail@example.com'
+                })
+            });
+        });
+
+        it('should update user password successfully (hashed)', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { password: 'newPassword456' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(bcrypt.genSalt).toHaveBeenCalledWith(10);
+            expect(bcrypt.hash).toHaveBeenCalledWith('newPassword456', 'salt');
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'John Doe',
+                    email: 'john@example.com'
+                })
+            });
+
+            // Verify updated user has new hashed password
+            const updatedUser = await User.findById(user._id);
+            expect(updatedUser.password).toBe('hashedPassword123'); // Mocked hash value
+        });
+
+        it('should update multiple fields at once', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: {
+                    name: 'Jane Smith',
+                    email: 'jane@example.com',
+                    password: 'newPassword789'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'Jane Smith',
+                    email: 'jane@example.com'
+                })
+            });
+        });
+
+        it('should return 404 if user does not exist', async () => {
+            const req = {
+                params: { id: '507f1f77bcf86cd799439011' }, // Valid but non-existent ObjectId
+                body: { name: 'New Name' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: 'User not found',
+                    statusCode: 404
+                })
+            );
+        });
+
+        it('should return 409 if email is already taken by another user', async () => {
+            // Create two users
+            const user1 = await User.create({
+                name: 'User 1',
+                email: 'user1@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const user2 = await User.create({
+                name: 'User 2',
+                email: 'user2@example.com',
+                password: 'hashedPassword123'
+            });
+
+            // Try to update user1's email to user2's email
+            const req = {
+                params: { id: user1._id.toString() },
+                body: { email: 'user2@example.com' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: 'Email already in use by another user',
+                    statusCode: 409
+                })
+            );
+        });
+
+        it('should allow updating to the same email (no change)', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            // Update with the same email (should not trigger duplicate check)
+            const req = {
+                params: { id: user._id.toString() },
+                body: { email: 'john@example.com', name: 'Jane Doe' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'Jane Doe',
+                    email: 'john@example.com'
+                })
+            });
+        });
+
+        it('should return 400 if no fields are provided', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: {}
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: 'No valid fields provided for update',
+                    statusCode: 400
+                })
+            );
+        });
+
+        it('should handle invalid ObjectId', async () => {
+            const req = {
+                params: { id: 'invalid-id' },
+                body: { name: 'New Name' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should run validators and handle validation errors', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            // Try to update with invalid name (too short)
+            const req = {
+                params: { id: user._id.toString() },
+                body: { name: 'J' } // Too short (min: 2)
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should not return password in response', async () => {
+            // Create a user
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { name: 'Jane Smith' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            const responseData = res.json.mock.calls[0][0].data;
+            expect(responseData.password).toBeUndefined();
         });
     });
 
