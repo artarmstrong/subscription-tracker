@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import User from "../models/user.model.js";
+import Subscription from "../models/subscription.model.js";
 
 export const getUsers = async (req, res, next) => {
     try {
@@ -64,6 +65,33 @@ export const createUser = async (req, res, next) => {
             success: true,
             message: 'User created successfully',
             data: userResponse
+        });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export const deleteUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+
+        // Find the user first
+        const user = await User.findById(id);
+        if (!user) {
+            const error = new Error('User not found');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Delete all subscriptions associated with this user (cascade delete)
+        await Subscription.deleteMany({ user: id });
+
+        // Delete the user
+        await User.findByIdAndDelete(id);
+
+        res.status(200).json({
+            success: true,
+            message: 'User and associated subscriptions deleted successfully'
         });
     } catch (error) {
         next(error);
