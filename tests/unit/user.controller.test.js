@@ -198,6 +198,140 @@ describe('User Controller', () => {
 
             expect(next).toHaveBeenCalledWith(expect.any(Error));
         });
+
+        it('should reject name that is too long (max: 50)', async () => {
+            const req = {
+                body: {
+                    name: 'A'.repeat(51), // 51 characters, exceeds max of 50
+                    email: 'john@example.com',
+                    password: 'password123'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should reject password that is too short (min: 6)', async () => {
+            const req = {
+                body: {
+                    name: 'John Doe',
+                    email: 'john@example.com',
+                    password: '12345' // Only 5 characters, min is 6
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should reject invalid email format', async () => {
+            const req = {
+                body: {
+                    name: 'John Doe',
+                    email: 'invalid-email', // Missing @ and domain
+                    password: 'password123'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should convert email to lowercase', async () => {
+            const req = {
+                body: {
+                    name: 'John Doe',
+                    email: 'JOHN@EXAMPLE.COM',
+                    password: 'password123'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User created successfully',
+                data: expect.objectContaining({
+                    email: 'john@example.com' // Should be lowercase
+                })
+            });
+        });
+
+        it('should trim whitespace from name and email', async () => {
+            const req = {
+                body: {
+                    name: '  John Doe  ',
+                    email: '  john@example.com  ',
+                    password: 'password123'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User created successfully',
+                data: expect.objectContaining({
+                    name: 'John Doe',
+                    email: 'john@example.com'
+                })
+            });
+        });
+
+        it('should handle empty string as missing field', async () => {
+            const req = {
+                body: {
+                    name: '',
+                    email: 'john@example.com',
+                    password: 'password123'
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await createUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: 'Name, email, and password are required',
+                    statusCode: 400
+                })
+            );
+        });
     });
 
     describe('getUsers', () => {
@@ -636,6 +770,157 @@ describe('User Controller', () => {
 
             const responseData = res.json.mock.calls[0][0].data;
             expect(responseData.password).toBeUndefined();
+        });
+
+        it('should reject name that is too long (max: 50)', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { name: 'A'.repeat(51) } // 51 characters, exceeds max of 50
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should reject password that is too short (min: 6)', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { password: '12345' } // Only 5 characters, min is 6
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should reject invalid email format when updating', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { email: 'invalid-email-format' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
+        });
+
+        it('should convert email to lowercase when updating', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { email: 'NEWEMAIL@EXAMPLE.COM' }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    email: 'newemail@example.com' // Should be lowercase
+                })
+            });
+        });
+
+        it('should trim whitespace from name and email when updating', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: {
+                    name: '  Jane Smith  ',
+                    email: '  jane@example.com  '
+                }
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            expect(res.status).toHaveBeenCalledWith(200);
+            expect(res.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'User updated successfully',
+                data: expect.objectContaining({
+                    name: 'Jane Smith',
+                    email: 'jane@example.com'
+                })
+            });
+        });
+
+        it('should handle empty strings for optional update fields', async () => {
+            const user = await User.create({
+                name: 'John Doe',
+                email: 'john@example.com',
+                password: 'hashedPassword123'
+            });
+
+            const req = {
+                params: { id: user._id.toString() },
+                body: { name: '' } // Empty string
+            };
+            const res = {
+                status: jest.fn().mockReturnThis(),
+                json: jest.fn()
+            };
+            const next = jest.fn();
+
+            await updateUser(req, res, next);
+
+            // Empty string should trigger validation error (minLength: 2)
+            expect(next).toHaveBeenCalledWith(expect.any(Error));
         });
     });
 
